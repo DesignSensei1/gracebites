@@ -25,10 +25,13 @@ const bad = (error: string, status = 400) => NextResponse.json({ error }, { stat
 export async function POST(request: Request) {
   if (!isSupabaseConfigured) return bad("The shop database isn't configured yet.", 503);
 
-  const supabase = await createClient();
+  // The website signs in with cookies; the mobile app sends its Supabase
+  // access token as "Authorization: Bearer <token>".
+  const authHeader = request.headers.get("authorization") ?? "";
+  const bearer = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7).trim() : "";
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = bearer ? await createAdminClient().auth.getUser(bearer) : await (await createClient()).auth.getUser();
   if (!user || !user.email) return bad("Please sign in with Google to place an order.", 401);
 
   let body: CheckoutBody;
