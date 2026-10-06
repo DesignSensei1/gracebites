@@ -88,6 +88,10 @@ Without Supabase keys the storefront still renders using the default menu, but s
 2. Add every variable from `.env.example` in **Project → Settings → Environment Variables**, with `NEXT_PUBLIC_SITE_URL` set to your live URL.
 3. Add the live URL to Supabase (Site URL + `/auth/callback` redirect) and to Google (JavaScript origin).
 
+## Mobile app
+
+The `mobile/` folder has an Expo (React Native) app for Android and iOS. It uses the same Supabase project and the same `/api/checkout` endpoint. Customers sign in with the same Google account, and the cart syncs live between the app and the website through Supabase Realtime. See [`mobile/README.md`](mobile/README.md) for setup.
+
 ## Project structure
 
 ```
