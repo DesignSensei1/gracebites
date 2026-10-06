@@ -167,3 +167,17 @@ drop policy if exists "own order items read" on public.order_items;
 create policy "own order items read" on public.order_items for select using (
   exists (select 1 from public.orders o where o.id = order_id and o.user_id = auth.uid())
 );
+
+-- ---------------------------------------------------------------------------
+-- Realtime: broadcast cart changes so the website and mobile app stay in sync
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'cart_items'
+  ) then
+    alter publication supabase_realtime add table public.cart_items;
+  end if;
+end;
+$$;
