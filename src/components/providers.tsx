@@ -119,6 +119,36 @@ function CartProvider({ children }: { children: React.ReactNode }) {
     if (!user) syncedUser.current = null;
   }, [user]);
 
+  // Live sync: when the cart changes on another device (e.g. the mobile app),
+  // reload it from Supabase so this tab updates instantly.
+  useEffect(() => {
+    if (!ready || !user) return;
+    const supabase = createClient();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const reload = () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const { data, error } = await supabase.from("cart_items").select("flavour_id,size_id,quantity");
+        if (!error && data) setItems(data);
+      }, 250);
+    };
+    const mine = { schema: "public", table: "cart_items", filter: `user_id=eq.${user.id}` };
+    const channel = supabase
+      .channel(`cart-${user.id}`)
+      .on("postgres_changes", { event: "INSERT", ...mine }, reload)
+      .on("postgres_changes", { event: "UPDATE", ...mine }, reload)
+      // Delete events can't be filtered by user, so any delete triggers a reload of our own cart.
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "cart_items" }, reload)
+      .subscribe();
+    const onVisible = () => document.visibilityState === "visible" && reload();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      supabase.removeChannel(channel);
+    };
+  }, [ready, user]);
+
   const persist = useCallback(
     (flavour_id: string, size_id: string, quantity: number) => {
       if (!user) return;
